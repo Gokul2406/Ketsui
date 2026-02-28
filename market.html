@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KETSUI — Market</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #080c10;
+  --bg2:    #0d1117;
+  --bg3:    #111820;
+  --border: #1c2430;
+  --blue:   #3d8bff;
+  --cyan:   #00d4ff;
+  --green:  #00e676;
+  --red:    #ff4560;
+  --amber:  #ffa726;
+  --text:   #cdd5e0;
+  --muted:  #4a5568;
+  --muted2: #1e2a38;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  min-height: 100vh;
+}
+
+/* ── Login ───────────────────────────────────── */
+#login-screen {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-wrap {
+  width: 400px;
+}
+
+.login-glow {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  margin-bottom: 0;
+}
+
+.login-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 36px 40px 40px;
+}
+
+.login-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--cyan);
+  letter-spacing: -0.5px;
+  margin-bottom: 2px;
+}
+
+.login-sub {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin-bottom: 28px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus { border-color: var(--cyan); }
+.field input::placeholder { color: var(--muted); }
+
+.login-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--cyan);
+  color: #000;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.login-btn:hover { opacity: 0.85; }
+
+.login-err {
+  color: var(--red);
+  font-size: 11px;
+  margin-top: 10px;
+  display: none;
+}
+
+/* ── App ─────────────────────────────────────── */
+#app { display: none; flex-direction: column; min-height: 100vh; }
+
+/* header */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.hdr-brand {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--cyan);
+  letter-spacing: -0.3px;
+}
+
+.hdr-brand span { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+.hdr-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Asset selector */
+.asset-selector {
+  display: flex;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.asset-btn {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.asset-btn:last-child { border-right: none; }
+.asset-btn:hover { background: var(--bg3); color: var(--text); }
+.asset-btn.active { background: var(--cyan); color: #000; font-weight: 500; }
+
+.hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.hdr-right .val { color: var(--text); }
+
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  display: inline-block;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.4; transform:scale(0.7); }
+}
+
+/* news banner */
+.news-bar {
+  padding: 9px 24px;
+  background: rgba(255,167,38,0.07);
+  border-bottom: 1px solid rgba(255,167,38,0.2);
+  display: none;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.news-bar.visible { display: flex; }
+.news-bar-label   { color: var(--amber); font-weight: 500; white-space: nowrap; }
+.news-bar-headline{ color: var(--text); }
+.news-bar-affected{ color: var(--cyan); white-space: nowrap; font-size: 10px; }
+.news-bar-src     { color: var(--muted); white-space: nowrap; }
+
+/* main body */
+.body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 0;
+}
+
+/* chart area */
+.chart-area {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* price hero */
+.price-hero {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.price-main {
+  font-family: 'Outfit', sans-serif;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.price-change {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.price-change.up   { color: var(--green); }
+.price-change.down { color: var(--red); }
+
+/* canvas chart */
+.chart-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-wrap canvas {
+  display: block;
+  width: 100%;
+}
+
+.chart-label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.chart-label span { color: var(--cyan); }
+
+/* stat row */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.stat {
+  background: var(--bg2);
+  padding: 14px 16px;
+}
+
+.stat-label {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.stat-val {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.stat-val.ask { color: var(--red); }
+.stat-val.bid { color: var(--green); }
+
+/* order book sidebar */
+.sidebar {
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.sb-title {
+  padding: 14px 16px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.mini-asset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--muted2);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mini-asset:hover { background: var(--bg3); }
+.mini-asset.active { background: rgba(0,212,255,0.06); border-left: 2px solid var(--cyan); }
+
+.mini-asset-left  { display: flex; flex-direction: column; gap: 2px; }
+
+.mini-asset-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.mini-asset-chg { font-size: 10px; }
+.mini-asset-chg.up   { color: var(--green); }
+.mini-asset-chg.down { color: var(--red); }
+.mini-asset-chg.flat { color: var(--muted); }
+
+.mini-asset-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+/* status bar */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.statusbar .sep { color: var(--muted2); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-glow"></div>
+    <div class="login-box">
+      <div class="login-title">KETSUI</div>
+      <div class="login-sub">MARKET TERMINAL — TEAM ACCESS</div>
+      <div class="field">
+        <label>Server URL</label>
+        <input id="l-url" type="text" placeholder="http://localhost:8000" value="http://localhost:8000"/>
+      </div>
+      <div class="field">
+        <label>Team API Key</label>
+        <input id="l-key" type="password" placeholder="key-alpha-1234"/>
+      </div>
+      <button class="login-btn" onclick="doLogin()">CONNECT TO MARKET</button>
+      <div class="login-err" id="login-err">Could not connect — check URL and API key.</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-brand">KETSUI <span>/ MARKET</span></div>
+
+    <div class="hdr-center">
+      <div class="asset-selector" id="asset-selector">
+        <!-- populated dynamically -->
+      </div>
+    </div>
+
+    <div class="hdr-right">
+      <span class="live-dot" id="live-dot" style="display:none"></span>
+      <span>FRAME <span class="val" id="hdr-frame">—</span></span>
+      <span>T+ <span class="val" id="hdr-elapsed">—</span></span>
+    </div>
+  </div>
+
+  <!-- News -->
+  <div class="news-bar" id="news-bar">
+    <span class="news-bar-label">📰 NEWS</span>
+    <span class="news-bar-headline" id="nb-headline">—</span>
+    <span class="news-bar-affected" id="nb-affected"></span>
+    <span class="news-bar-src" id="nb-src">—</span>
+  </div>
+
+  <div class="body">
+    <!-- Chart area -->
+    <div class="chart-area">
+      <div class="price-hero">
+        <div class="price-main" id="price-main">—</div>
+        <div class="price-change" id="price-change"></div>
+      </div>
+
+      <div class="chart-wrap" id="chart-wrap">
+        <div class="chart-label">LTP HISTORY — <span id="chart-asset-label">—</span></div>
+        <canvas id="price-chart" height="300"></canvas>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-label">Price</div>
+          <div class="stat-val" id="stat-true">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Change</div>
+          <div class="stat-val ask" id="stat-ask">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Change %</div>
+          <div class="stat-val bid" id="stat-bid">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Asset</div>
+          <div class="stat-val" id="stat-spread">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar: all assets + news detail -->
+    <div class="sidebar">
+      <div class="sb-title">ALL ASSETS</div>
+      <div id="mini-assets"></div>
+      <div class="sb-title" style="border-top:1px solid var(--border);margin-top:auto">LATEST NEWS</div>
+      <div id="news-detail" style="padding:14px 16px;font-size:11px;color:var(--muted);line-height:1.7;flex:1;overflow-y:auto">
+        No news yet.
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span id="sb-status">OFFLINE</span>
+    <span class="sep">|</span>
+    <span id="sb-time">—</span>
+    <span class="sep">|</span>
+    <span>KETSUI MARKET v2.0</span>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────
+let BASE_URL     = '';
+let TEAM_KEY     = '';
+let pollTimer    = null;
+let selectedAsset = null;
+let assetNames   = [];
+let ltpHistory   = {};   // asset → [price, ...]
+let lastNewsId   = null;
+let prevLtps     = {};
+const MAX_HISTORY = 200;
+
+// ─── Auth ─────────────────────────────────────────────
+async function doLogin() {
+  const url = document.getElementById('l-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('l-key').value.trim();
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  try {
+    const r = await fetch(`${url}/market`, { headers: { 'x-api-key': key } });
+    if (!r.ok) throw new Error('bad key or server down');
+    const mkt = await r.json();
+
+    BASE_URL  = url;
+    TEAM_KEY  = key;
+    assetNames = Object.keys(mkt.assets);
+    assetNames.forEach(n => ltpHistory[n] = []);
+
+    // Build asset buttons
+    const sel = document.getElementById('asset-selector');
+    sel.innerHTML = '';
+    assetNames.forEach((name, i) => {
+      const btn = document.createElement('button');
+      btn.className   = 'asset-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = name;
+      btn.onclick     = () => selectAsset(name);
+      sel.appendChild(btn);
+    });
+
+    selectedAsset = assetNames[0];
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display          = 'flex';
+
+    startPolling();
+  } catch(e) {
+    err.style.display = 'block';
+  }
+}
+
+function selectAsset(name) {
+  selectedAsset = name;
+  document.querySelectorAll('.asset-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === name);
+  });
+}
+
+const hdrs = () => ({ 'x-api-key': TEAM_KEY });
+
+// ─── Polling ──────────────────────────────────────────
+function startPolling() {
+  fetchAll();
+  pollTimer = setInterval(fetchAll, 2000);
+}
+
+async function fetchAll() {
+  if (!selectedAsset) return;
+  try {
+    const [mktRes] = await Promise.all([
+      fetch(`${BASE_URL}/market`, { headers: hdrs() }),
+    ]);
+
+    if (!mktRes.ok) return;
+
+    const mkt = await mktRes.json();
+
+    // accumulate price history per asset
+    for (const [name, info] of Object.entries(mkt.assets)) {
+      if (!ltpHistory[name]) ltpHistory[name] = [];
+      ltpHistory[name].push(info.price);
+      if (ltpHistory[name].length > MAX_HISTORY) ltpHistory[name].shift();
+    }
+
+    renderHeader(mkt);
+    renderNews(mkt.news);
+    renderPriceHero(mkt.assets[selectedAsset]);
+    renderChart();
+    renderStats(mkt.assets[selectedAsset]);
+    renderMiniAssets(mkt.assets);
+    renderNewsDetail(mkt.news);
+    renderStatusBar();
+  } catch (e) {
+    document.getElementById('sb-status').textContent = 'ERROR: ' + e.message;
+  }
+}
+
+// ─── Renderers ────────────────────────────────────────
+function fmt4(n)  { return Number(n).toFixed(4); }
+function fmt2(n)  { return Number(n).toFixed(2); }
+
+function elapsedStr(s) {
+  const m   = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function renderHeader(mkt) {
+  document.getElementById('hdr-frame').textContent   = mkt.frame + ' / ' + mkt.total_frames;
+  document.getElementById('hdr-elapsed').textContent = elapsedStr(mkt.elapsed_seconds || 0);
+  const dot = document.getElementById('live-dot');
+  dot.style.display = 'inline-block';
+}
+
+function renderNews(n) {
+  const bar = document.getElementById('news-bar');
+  if (!n) { bar.classList.remove('visible'); return; }
+  if (n.id !== lastNewsId) {
+    lastNewsId = n.id;
+    document.getElementById('nb-headline').textContent = n.headline;
+    document.getElementById('nb-src').textContent      = '— ' + n.source;
+    const aff = n.assets_affected || [];
+    document.getElementById('nb-affected').textContent = aff.length ? '[' + aff.join(', ') + ']' : '';
+    bar.classList.remove('visible');
+    void bar.offsetWidth;
+    bar.classList.add('visible');
+  }
+}
+
+function renderPriceHero(asset) {
+  if (!asset) return;
+  const price  = asset.price;
+  const chg    = asset.change    || 0;
+  const chgPct = asset.change_pct || 0;
+  const dir    = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
+
+  document.getElementById('price-main').textContent = fmt4(price);
+  const chgEl = document.getElementById('price-change');
+  chgEl.textContent = `${chg >= 0 ? '▲ +' : '▼ '}${fmt4(Math.abs(chg))} (${chg >= 0 ? '+' : ''}${chgPct.toFixed(4)}%)`;
+  chgEl.className   = 'price-change ' + dir;
+  prevLtps[selectedAsset] = price;
+}
+
+function renderStats(asset) {
+  if (!asset) return;
+  document.getElementById('stat-true').textContent   = fmt4(asset.price);
+  document.getElementById('stat-ask').textContent    = asset.change    != null ? (asset.change >= 0 ? '+' : '') + fmt4(asset.change) : '—';
+  document.getElementById('stat-bid').textContent    = asset.change_pct != null ? (asset.change_pct >= 0 ? '+' : '') + asset.change_pct.toFixed(4) + '%' : '—';
+  document.getElementById('stat-spread').textContent = selectedAsset;
+  document.getElementById('chart-asset-label').textContent = selectedAsset;
+}
+
+function renderChart() {
+  const canvas = document.getElementById('price-chart');
+  const wrap   = document.getElementById('chart-wrap');
+  canvas.width = wrap.clientWidth;
+  const ctx    = canvas.getContext('2d');
+  const data   = ltpHistory[selectedAsset] || [];
+  const W      = canvas.width;
+  const H      = canvas.height;
+  const PAD    = { top: 30, right: 16, bottom: 30, left: 64 };
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (data.length < 2) {
+    ctx.fillStyle = '#2a3a4a';
+    ctx.font      = '11px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Waiting for price data...', W / 2, H / 2);
+    return;
+  }
+
+  const minP = Math.min(...data);
+  const maxP = Math.max(...data);
+  const rangeP = maxP - minP || 1;
+  const plotW  = W - PAD.left - PAD.right;
+  const plotH  = H - PAD.top  - PAD.bottom;
+
+  const toX = i   => PAD.left + (i / (data.length - 1)) * plotW;
+  const toY = val => PAD.top  + (1 - (val - minP) / rangeP) * plotH;
+
+  // Grid lines
+  ctx.strokeStyle = '#1c2430';
+  ctx.lineWidth   = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD.top + (i / 4) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(W - PAD.right, y);
+    ctx.stroke();
+    const price = maxP - (i / 4) * rangeP;
+    ctx.fillStyle  = '#4a5568';
+    ctx.font       = '10px DM Mono, monospace';
+    ctx.textAlign  = 'right';
+    ctx.fillText(price.toFixed(4), PAD.left - 6, y + 3);
+  }
+
+  // Gradient fill under line
+  const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + plotH);
+  grad.addColorStop(0,   'rgba(0, 212, 255, 0.18)');
+  grad.addColorStop(1,   'rgba(0, 212, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(toX(0), toY(data[0]));
+  for (let i = 1; i < data.length; i++) ctx.lineTo(toX(i), toY(data[i]));
+  ctx.lineTo(toX(data.length - 1), PAD.top + plotH);
+  ctx.lineTo(toX(0), PAD.top + plotH);
+  ctx.closePath();
+  ctx.fill();
+
+  // Price line
+  ctx.beginPath();
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.moveTo(toX(0), toY(data[0]));
+  for (let i = 1; i < data.length; i++) ctx.lineTo(toX(i), toY(data[i]));
+  ctx.stroke();
+
+  // Current price dot
+  const lastX = toX(data.length - 1);
+  const lastY = toY(data[data.length - 1]);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#00d4ff';
+  ctx.fill();
+  ctx.strokeStyle = '#080c10';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  // Latest price label
+  ctx.fillStyle  = '#00d4ff';
+  ctx.font       = '10px DM Mono, monospace';
+  ctx.textAlign  = 'left';
+  ctx.fillText(data[data.length - 1].toFixed(4), lastX + 8, lastY + 4);
+}
+
+function renderMiniAssets(assets) {
+  if (!assets) return;
+  const container = document.getElementById('mini-assets');
+  container.innerHTML = '';
+  for (const [name, a] of Object.entries(assets)) {
+    const chg    = a.change     || 0;
+    const chgPct = a.change_pct || 0;
+    const dir    = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat';
+    const arrow  = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '●';
+
+    const row = document.createElement('div');
+    row.className = 'mini-asset' + (name === selectedAsset ? ' active' : '');
+    row.innerHTML = `
+      <div class="mini-asset-left">
+        <span class="mini-asset-name">${name}</span>
+        <span class="mini-asset-chg ${dir}">${arrow} ${chg >= 0 ? '+' : ''}${chgPct.toFixed(4)}%</span>
+      </div>
+      <span class="mini-asset-price">${a.price.toFixed(4)}</span>
+    `;
+    row.onclick = () => selectAsset(name);
+    container.appendChild(row);
+  }
+}
+
+let lastNewsDetailId = null;
+function renderNewsDetail(news) {
+  if (!news || news.id === lastNewsDetailId) return;
+  lastNewsDetailId = news.id;
+  const el = document.getElementById('news-detail');
+  el.innerHTML = `
+    <div style="color:var(--amber);font-size:9px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px">${news.source}</div>
+    <div style="color:var(--text);font-size:12px;font-weight:500;margin-bottom:8px;line-height:1.5">${news.headline}</div>
+   <!-- <div style="color:var(--cyan);font-size:10px;margin-bottom:8px">Affects: ${(news.assets_affected || []).join(', ') || '—'}</div> -->
+<!--    <div style="color:var(--muted);font-size:10px;letter-spacing:0.05em">FRAME ${news.frame}</div> -->
+  `;
+}
+
+function renderStatusBar() {
+  document.getElementById('sb-status').textContent = '● LIVE';
+  document.getElementById('sb-time').textContent   = new Date().toLocaleTimeString();
+}
+
+// Resize chart on window resize
+window.addEventListener('resize', renderChart);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KETSUI — Admin Console</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0d0d0d;
+  --bg2:      #111111;
+  --bg3:      #161616;
+  --border:   #222222;
+  --amber:    #ffb800;
+  --amber2:   #cc9400;
+  --green:    #00cc66;
+  --red:      #ff3355;
+  --blue:     #4488ff;
+  --text:     #e0e0e0;
+  --muted:    #555555;
+  --muted2:   #333333;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  min-height: 100vh;
+}
+
+/* ── Login screen ───────────────────────────── */
+#login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  flex-direction: column;
+  gap: 0;
+}
+
+.login-box {
+  border: 1px solid var(--amber);
+  padding: 40px 48px;
+  background: var(--bg2);
+  width: 420px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--amber);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.login-sub {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  margin-bottom: 32px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--muted2);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus { border-color: var(--amber); }
+.field input::placeholder { color: var(--muted); }
+
+.login-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--amber);
+  color: #000;
+  border: none;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.login-btn:hover { opacity: 0.85; }
+
+.login-err {
+  color: var(--red);
+  font-size: 11px;
+  margin-top: 12px;
+  display: none;
+}
+
+/* ── Main layout ────────────────────────────── */
+#app { display: none; flex-direction: column; min-height: 100vh; }
+
+/* topbar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.brand {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--amber);
+  letter-spacing: 0.2em;
+}
+
+.brand span { color: var(--muted); font-weight: 400; }
+
+.tag {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.tag.live {
+  border-color: var(--green);
+  color: var(--green);
+  animation: blink-border 2s ease-in-out infinite;
+}
+
+@keyframes blink-border {
+  0%,100% { opacity:1; } 50% { opacity:0.5; }
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.topbar-right .val { color: var(--text); }
+
+.logout-btn {
+  background: none;
+  border: 1px solid var(--muted2);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+}
+.logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ticker strip */
+.ticker-strip {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+  overflow: hidden;
+}
+
+.ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-right: 1px solid var(--border);
+  min-width: 180px;
+  transition: background 0.3s;
+}
+
+.ticker-item.flash-up   { background: rgba(0,204,102,0.1); }
+.ticker-item.flash-down { background: rgba(255,51,85,0.1); }
+
+.ticker-name { color: var(--amber); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; }
+.ticker-price { font-size: 13px; font-weight: 600; color: var(--text); }
+.ticker-change { font-size: 10px; }
+.ticker-change.up   { color: var(--green); }
+.ticker-change.down { color: var(--red); }
+
+/* news banner */
+.news-banner {
+  padding: 8px 20px;
+  background: rgba(255,184,0,0.06);
+  border-bottom: 1px solid rgba(255,184,0,0.2);
+  display: none;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.news-banner.visible { display: flex; }
+.news-label { color: var(--amber); font-weight: 600; letter-spacing: 0.1em; white-space: nowrap; }
+.news-text  { color: var(--text); }
+.news-src   { color: var(--muted); white-space: nowrap; }
+
+/* main content */
+.content {
+  flex: 1;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── section ────────────────────────────────── */
+.section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.section-title {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section-meta { font-size: 10px; color: var(--muted); }
+
+/* ── portfolios grid ────────────────────────── */
+.portfolios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--border);
+}
+
+.portfolio-card {
+  background: var(--bg2);
+  padding: 16px;
+  animation: fadeUp 0.3s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.pc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: 0.05em;
+}
+
+.pc-rank {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--muted2);
+  color: var(--muted);
+}
+
+.pc-rank.r1 { border-color: var(--amber); color: var(--amber); }
+.pc-rank.r2 { border-color: #888; color: #888; }
+.pc-rank.r3 { border-color: #cd7f32; color: #cd7f32; }
+
+.pc-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.pc-pnl {
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.pc-pnl.pos { color: var(--green); }
+.pc-pnl.neg { color: var(--red); }
+.pc-pnl.neu { color: var(--muted); }
+
+.pc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-top: 1px solid var(--muted2);
+  font-size: 11px;
+}
+
+.pc-row-label { color: var(--muted); }
+.pc-row-val   { color: var(--text); }
+
+.carry-tag {
+  font-size: 9px;
+  color: var(--amber);
+  border: 1px solid var(--amber2);
+  padding: 1px 5px;
+  letter-spacing: 0.05em;
+}
+
+/* ── leaderboard ────────────────────────────── */
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lb-table th {
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.lb-table td {
+  padding: 10px 16px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--muted2);
+}
+
+.lb-table tr:last-child td { border-bottom: none; }
+
+.lb-table tr:hover td { background: rgba(255,184,0,0.03); }
+
+.lb-rank  { color: var(--amber); font-weight: 700; width: 30px; }
+.lb-name  { color: var(--text); font-weight: 500; }
+.lb-val   { color: var(--text); font-weight: 600; text-align: right; }
+.lb-pnl   { text-align: right; }
+.lb-pnl.pos { color: var(--green); }
+.lb-pnl.neg { color: var(--red); }
+.lb-pnl.neu { color: var(--muted); }
+.lb-pct   { text-align: right; font-size: 10px; }
+.lb-pct.pos { color: var(--green); }
+.lb-pct.neg { color: var(--red); }
+
+/* ── price movements panel ──────────────────── */
+.pm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.pm-cell {
+  background: var(--bg2);
+  padding: 14px 16px;
+  transition: background 0.3s;
+}
+
+.pm-cell.flash-up   { background: rgba(0,204,102,0.08); }
+.pm-cell.flash-down { background: rgba(255,51,85,0.08); }
+
+.pm-name {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--amber);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.pm-price {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.pm-change {
+  font-size: 11px;
+}
+
+.pm-change.up   { color: var(--green); }
+.pm-change.down { color: var(--red); }
+.pm-change.flat { color: var(--muted); }
+
+/* ── status bar ─────────────────────────────── */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 6px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.statusbar .sep { color: var(--muted2); }
+
+/* ── placeholder ────────────────────────────── */
+.placeholder {
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+/* ── admin controls ─────────────────────────── */
+.admin-controls {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.ctrl-btn {
+  background: none;
+  border: 1px solid var(--muted2);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+.ctrl-btn.danger:hover { border-color: var(--red); color: var(--red); }
+.ctrl-btn.success:hover { border-color: var(--green); color: var(--green); }
+
+.ctrl-input {
+  background: var(--bg);
+  border: 1px solid var(--muted2);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 6px 10px;
+  width: 70px;
+  outline: none;
+}
+.ctrl-input:focus { border-color: var(--amber); }
+
+.ctrl-msg {
+  font-size: 10px;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.05em;
+}
+
+/* ── left/right layout ──────────────────────── */
+.left-col { display: flex; flex-direction: column; gap: 16px; }
+.right-col { display: flex; flex-direction: column; gap: 16px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">KETSUI</div>
+    <div class="login-sub">ADMIN CONSOLE — RESTRICTED ACCESS</div>
+    <div class="field">
+      <label>Server URL</label>
+      <input id="l-url" type="text" placeholder="http://localhost:8000" value="http://localhost:8000"/>
+    </div>
+    <div class="field">
+      <label>Admin API Key</label>
+      <input id="l-key" type="password" placeholder="admin-super-secret-key-change-this"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">AUTHENTICATE</button>
+    <div class="login-err" id="login-err">Invalid credentials or server unreachable.</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand">KETSUI <span>/ ADMIN</span></div>
+      <div class="tag" id="game-tag">WAITING</div>
+    </div>
+    <div class="topbar-right">
+      <span>FRAME <span class="val" id="hdr-frame">—</span></span>
+      <span>ELAPSED <span class="val" id="hdr-elapsed">—</span></span>
+      <span id="hdr-url" class="val" style="color:var(--muted);font-size:10px;"></span>
+      <button class="logout-btn" onclick="logout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <!-- Ticker strip -->
+  <div class="ticker-strip" id="ticker-strip">
+    <div class="ticker-item"><span class="ticker-name">—</span></div>
+  </div>
+
+  <!-- News banner -->
+  <div class="news-banner" id="news-banner">
+    <span class="news-label">📰 BREAKING</span>
+    <span class="news-text" id="news-text">—</span>
+    <span class="news-src" id="news-src">—</span>
+  </div>
+
+  <!-- Admin controls -->
+  <div class="admin-controls">
+    <button class="ctrl-btn success" onclick="adminStart()">▶ START GAME</button>
+    <button class="ctrl-btn danger" onclick="adminReset()">↺ RESET</button>
+    <span style="color:var(--muted);font-size:10px;margin:auto 4px;letter-spacing:0.1em;">RELEASE NEWS:</span>
+    <input class="ctrl-input" id="news-idx" type="number" placeholder="0" min="0" value="0"/>
+    <button class="ctrl-btn" onclick="adminReleaseNews()">RELEASE</button>
+    <span style="color:var(--muted);font-size:10px;margin:auto 4px;letter-spacing:0.1em;">SKIP FRAMES:</span>
+    <input class="ctrl-input" id="skip-frames" type="number" placeholder="10" min="1" value="10"/>
+    <button class="ctrl-btn" onclick="adminSkipFrames()">SKIP</button>
+    <span class="ctrl-msg" id="ctrl-msg"></span>
+  </div>
+
+  <!-- Main content -->
+  <div class="content">
+    <div class="left-col">
+
+      <!-- Portfolios -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Team Portfolios</span>
+          <span class="section-meta" id="port-meta">—</span>
+        </div>
+        <div class="portfolios-grid" id="portfolios-grid">
+          <div class="placeholder">Waiting for game data...</div>
+        </div>
+      </div>
+
+      <!-- Price Movements -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Price Movements</span>
+          <span class="section-meta" id="pm-frame-meta">—</span>
+        </div>
+        <div class="pm-grid" id="pm-grid">
+          <div class="placeholder" style="grid-column:1/-1">Waiting for game data...</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="right-col">
+
+      <!-- Leaderboard -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Leaderboard</span>
+        </div>
+        <table class="lb-table" id="lb-table">
+          <thead><tr>
+            <th>#</th><th>Team</th><th style="text-align:right">Value</th>
+            <th style="text-align:right">P&amp;L</th><th style="text-align:right">%</th>
+          </tr></thead>
+          <tbody id="lb-body"><tr><td colspan="5" style="padding:20px;color:var(--muted);text-align:center">—</td></tr></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <span id="sb-status">OFFLINE</span>
+    <span class="sep">|</span>
+    <span id="sb-refresh">—</span>
+    <span class="sep">|</span>
+    <span>KETSUI ADMIN v2.0</span>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────
+let BASE_URL     = '';
+let ADMIN_KEY    = '';
+let pollTimer    = null;
+let prevPrices   = {};
+let lastNewsId   = null;
+let startingCash = 40000;
+
+// ─── Auth ─────────────────────────────────────────────
+async function doLogin() {
+  const url = document.getElementById('l-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('l-key').value.trim();
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  try {
+    const r = await fetch(`${url}/admin/status`, { headers: { 'x-api-key': key } });
+    if (!r.ok) throw new Error('bad credentials');
+    BASE_URL  = url;
+    ADMIN_KEY = key;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display          = 'flex';
+    document.getElementById('hdr-url').textContent        = url;
+    startPolling();
+  } catch {
+    err.style.display = 'block';
+  }
+}
+
+function logout() {
+  clearInterval(pollTimer);
+  BASE_URL  = '';
+  ADMIN_KEY = '';
+  document.getElementById('app').style.display          = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+const hdrs = () => ({ 'x-api-key': ADMIN_KEY });
+
+// ─── Polling ──────────────────────────────────────────
+function startPolling() {
+  fetchAll();
+  pollTimer = setInterval(fetchAll, 2000);
+}
+
+async function fetchAll() {
+  try {
+    const [statusRes, lbRes] = await Promise.all([
+      fetch(`${BASE_URL}/admin/status`, { headers: hdrs() }),
+      fetch(`${BASE_URL}/leaderboard`,  { headers: hdrs() }),
+    ]);
+    if (!statusRes.ok) return;
+    const status = await statusRes.json();
+    const lb     = lbRes.ok ? await lbRes.json() : null;
+
+    renderTopbar(status);
+    renderTicker(status.assets);
+    renderNews(status.current_news);
+    renderPortfolios(status.portfolios, lb ? lb.leaderboard : null);
+    renderLeaderboard(lb ? lb.leaderboard : null);
+    renderPriceMovements(status.assets);
+    renderStatusBar(status);
+  } catch (e) {
+    document.getElementById('sb-status').textContent = 'ERROR: ' + e.message;
+  }
+}
+
+// ─── Render helpers ───────────────────────────────────
+function fmt(n) {
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtN(n) {
+  return (n >= 0 ? '+' : '') + fmt(n);
+}
+
+function elapsedStr(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function renderTopbar(s) {
+  const tag = document.getElementById('game-tag');
+  tag.textContent = s.started ? 'LIVE' : 'WAITING';
+  tag.className   = s.started ? 'tag live' : 'tag';
+  document.getElementById('hdr-frame').textContent   = s.current_frame + ' / ' + s.total_frames;
+  document.getElementById('hdr-elapsed').textContent = s.started ? elapsedStr(s.elapsed_seconds) : '—';
+}
+
+function renderTicker(assets) {
+  if (!assets) return;
+  const strip = document.getElementById('ticker-strip');
+  strip.innerHTML = '';
+  for (const [name, a] of Object.entries(assets)) {
+    const prev  = prevPrices[name];
+    const price = a.price;
+    const dir   = prev != null ? (price > prev ? 'up' : price < prev ? 'down' : '') : '';
+    const pct   = a.change_pct != null ? Math.abs(a.change_pct).toFixed(4) : (prev ? (((price - prev) / prev) * 100).toFixed(4) : '0.0000');
+    const item  = document.createElement('div');
+    item.className = 'ticker-item';
+    if (dir) {
+      item.classList.add('flash-' + dir);
+      setTimeout(() => item.classList.remove('flash-up', 'flash-down'), 600);
+    }
+    item.innerHTML = `
+      <span class="ticker-name">${name}</span>
+      <span class="ticker-price">${price.toFixed(4)}</span>
+      <span class="ticker-change ${dir}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '●'} ${Math.abs(pct)}%</span>
+    `;
+    strip.appendChild(item);
+    prevPrices[name] = price;
+  }
+}
+
+function renderNews(n) {
+  const banner = document.getElementById('news-banner');
+  if (!n) { banner.classList.remove('visible'); return; }
+  if (n.id !== lastNewsId) {
+    lastNewsId = n.id;
+    document.getElementById('news-text').textContent = n.headline;
+    document.getElementById('news-src').textContent  = `— ${n.source}`;
+    banner.classList.remove('visible');
+    void banner.offsetWidth;
+    banner.classList.add('visible');
+  }
+}
+
+function getRankClass(rank) {
+  return rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+}
+
+function renderPortfolios(portfolios, leaderboard) {
+  if (!portfolios) return;
+  const grid = document.getElementById('portfolios-grid');
+  grid.innerHTML = '';
+
+  const rankMap = {};
+  if (leaderboard) leaderboard.forEach(t => rankMap[t.team] = t.rank);
+
+  let meta = '';
+  const entries = Object.entries(portfolios);
+  const values  = entries.map(([, p]) => {
+    const sv = Object.entries(p.holdings || {}).reduce((sum, [, qty]) => sum + qty, 0);
+    return p.cash + sv; // rough
+  });
+  document.getElementById('port-meta').textContent = `${entries.length} teams`;
+
+  entries.forEach(([tid, p], i) => {
+    // calculate value from leaderboard if available
+    const lbEntry = leaderboard ? leaderboard.find(t => t.team.toLowerCase().includes(tid.split('_')[1])) : null;
+    const pv      = p.total_value;
+    const pnl     = pv - startingCash;
+    const pnlPct  = ((pnl / startingCash) * 100).toFixed(2);
+    const rank    = lbEntry ? lbEntry.rank : (i + 1);
+    const pnlCls  = pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : 'neu';
+
+    const card = document.createElement('div');
+    card.className = 'portfolio-card';
+    card.style.animationDelay = (i * 60) + 'ms';
+
+    let holdingsHtml = '';
+    if (p.holdings) {
+      for (const [asset, qty] of Object.entries(p.holdings)) {
+        holdingsHtml += `
+          <div class="pc-row">
+            <span class="pc-row-label">${asset}</span>
+            <span class="pc-row-val">${qty} units</span>
+          </div>`;
+      }
+    }
+
+
+    card.innerHTML = `
+      <div class="pc-header">
+        <span class="pc-name">${p.name}</span>
+        <span class="pc-rank ${getRankClass(rank)}">#${rank}</span>
+      </div>
+      <div class="pc-value">${fmt(pv)}</div>
+      <div class="pc-pnl ${pnlCls}">${fmtN(pnl)} (${pnl >= 0 ? '+' : ''}${pnlPct}%)</div>
+      <div class="pc-row">
+        <span class="pc-row-label">Cash</span>
+        <span class="pc-row-val">${fmt(p.cash)}</span>
+      </div>
+      ${holdingsHtml}
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderLeaderboard(board) {
+  if (!board) return;
+  const tbody = document.getElementById('lb-body');
+  tbody.innerHTML = board.map(t => {
+    const pnlCls = t.pnl > 0 ? 'pos' : t.pnl < 0 ? 'neg' : 'neu';
+    return `<tr>
+      <td class="lb-rank">#${t.rank}</td>
+      <td class="lb-name">${t.team}</td>
+      <td class="lb-val">${fmt(t.portfolio_value)}</td>
+      <td class="lb-pnl ${pnlCls}">${fmtN(t.pnl)}</td>
+      <td class="lb-pct ${pnlCls}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPriceMovements(assets) {
+  if (!assets) return;
+  const grid = document.getElementById('pm-grid');
+  grid.innerHTML = '';
+  document.getElementById('pm-frame-meta').textContent = Object.keys(assets).length + ' assets';
+
+  for (const [name, a] of Object.entries(assets)) {
+    const chg    = a.change     || 0;
+    const chgPct = a.change_pct || 0;
+    const dir    = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat';
+    const arrow  = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '●';
+
+    const cell = document.createElement('div');
+    cell.className = 'pm-cell';
+    cell.innerHTML = `
+      <div class="pm-name">${name}</div>
+      <div class="pm-price">${a.price.toFixed(4)}</div>
+      <div class="pm-change ${dir}">${arrow} ${chg >= 0 ? '+' : ''}${chg.toFixed(4)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(4)}%)</div>
+    `;
+
+    // Flash on price move
+    if (prevPrices[name] != null && a.price !== prevPrices[name]) {
+      cell.classList.add(dir === 'up' ? 'flash-up' : 'flash-down');
+      setTimeout(() => cell.classList.remove('flash-up', 'flash-down'), 700);
+    }
+
+    grid.appendChild(cell);
+  }
+}
+
+function renderStatusBar(s) {
+  document.getElementById('sb-status').textContent  = s.started ? '● LIVE' : '○ WAITING';
+  document.getElementById('sb-refresh').textContent = 'LAST UPDATE: ' + new Date().toLocaleTimeString();
+}
+
+// ─── Admin actions ────────────────────────────────────
+async function adminStart() {
+  try {
+    const r = await fetch(`${BASE_URL}/admin/start`, { method: 'POST', headers: hdrs() });
+    const d = await r.json();
+    showCtrlMsg(d.status || d.message || 'OK');
+  } catch(e) { showCtrlMsg('ERROR', true); }
+}
+
+async function adminReset() {
+  if (!confirm('Reset the entire game? This cannot be undone.')) return;
+  try {
+    const r = await fetch(`${BASE_URL}/admin/reset`, { method: 'POST', headers: hdrs() });
+    const d = await r.json();
+    showCtrlMsg(d.status);
+  } catch(e) { showCtrlMsg('ERROR', true); }
+}
+
+async function adminReleaseNews() {
+  const idx = parseInt(document.getElementById('news-idx').value) || 0;
+  try {
+    const r = await fetch(`${BASE_URL}/admin/release-news?index=${idx}`, { method: 'POST', headers: hdrs() });
+    const d = await r.json();
+    showCtrlMsg('NEWS RELEASED: ' + (d.news?.headline?.substring(0, 40) || 'ok'));
+  } catch(e) { showCtrlMsg('ERROR', true); }
+}
+
+async function adminSkipFrames() {
+  const n = parseInt(document.getElementById('skip-frames').value) || 10;
+  try {
+    const r = await fetch(`${BASE_URL}/admin/skip-frames?count=${n}`, { method: 'POST', headers: hdrs() });
+    const d = await r.json();
+    showCtrlMsg(`SKIPPED → FRAME ${d.new_frame}`);
+  } catch(e) { showCtrlMsg('ERROR', true); }
+}
+
+function showCtrlMsg(msg, isErr=false) {
+  const el = document.getElementById('ctrl-msg');
+  el.textContent  = '✓ ' + msg.toUpperCase();
+  el.style.color  = isErr ? 'var(--red)' : 'var(--green)';
+  setTimeout(() => el.textContent = '', 4000);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+</script>
+</body>
+</html>
