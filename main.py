@@ -24,11 +24,11 @@ from typing import Literal
 import uvicorn
 
 from config import (
-    TEAMS, ADMIN_KEY, STARTING_CASH,
+    TEAMS, ADMIN_KEY, STARTING_CASH, MAX_POSITION_VALUE,
     ASSETS, TOTAL_FRAMES, FRAME_INTERVAL_SECONDS,
-    DT, K_DECAY, DELTA_T_NEWS, KMU,
-    NEWS_FRAME_SPACING, NEWS_LAG_FRAMES,
-    WSOURCE, mu
+    DT, K_DECAY, KMU,
+    NEWS_LAG_FRAMES, WSOURCE, mu,
+    SIGMA_MAP_GAMMA, SIGMA_MAP_WINDOW
 )
 
 # ─────────────────────────────────────────────
@@ -38,65 +38,67 @@ from config import (
 def load_news_csvs():
     """
     Load news.csv and newsbeta.csv.
+    Matches the simulation's CSV loading exactly:
+      - Strips whitespace and filters empty lines
+      - Zips both files together
+      - deltat is dynamic: total_frames // len(combined_news)
+      - Frame start/end per event: i*deltat and (i+1)*deltat
 
     news.csv columns (pipe-delimited, 0-indexed):
-      0  - id / row number
+      0  - id
       1  - date
-      2  - headline text
-      3  - base impact multiplier (float)
+      2  - headline
+      3  - base multiplier (float)
       4  - source name (key in WSOURCE)
-      5  - Dr. Reddy's raw impact weight (float)
-      6  - Pfizer raw impact weight
-      7  - Coromandel raw impact weight
-      8  - Nestle raw impact weight
-      9  - HDFC raw impact weight
-      10 - SBI raw impact weight
+      5-10 - per-asset raw impact weights (Dr. Reddy's → SBI)
 
     newsbeta.csv columns (pipe-delimited, 0-indexed):
       0-4  - metadata (ignored)
-      5  - Dr. Reddy's expected % price change
-      6  - Pfizer expected % price change
-      7  - Coromandel expected % price change
-      8  - Nestle expected % price change
-      9  - HDFC expected % price change
-      10 - SBI expected % price change
+      5-10 - expected % price change per asset
     """
-    param    = []   # raw params per news row
-    idealb   = []   # expected beta per asset per news row
-    news_meta = []  # headline + source for display
-
-    with open("newsbeta.csv") as c:
-        for line in c:
-            parts = line.strip().split("|")
-            idealb.append([float(parts[j]) for j in range(5, 11)])
-
     with open("news.csv") as n:
-        for i, line in enumerate(n):
-            parts    = line.strip().split("|")
-            headline = parts[2] if len(parts) > 2 else f"Market Event {i+1}"
-            source   = parts[4].strip() if len(parts) > 4 else "Unknown"
-            src_w    = WSOURCE.get(source, 0.5)
+        lines_n = [line.strip() for line in n.readlines() if line.strip()]
+    with open("newsbeta.csv") as c:
+        lines_c = [line.strip() for line in c.readlines() if line.strip()]
 
-            # Build param row: [base_mult, src_weight, dr_impact, pf_impact, co_impact, ne_impact, hd_impact, sb_impact, frame_start, frame_end]
-            row = [float(parts[3])]          # index 0: base multiplier
-            row.append(src_w)                 # index 1: source credibility
-            for j in range(5, 11):           # index 2-7: per-asset raw impacts
-                row.append(float(parts[j]))
-            row.append(NEWS_FRAME_SPACING * i)           # index 8: frame start
-            row.append(NEWS_FRAME_SPACING * i + NEWS_FRAME_SPACING)  # index 9: frame end
+    combined = list(zip(lines_n, lines_c))
+    deltat   = TOTAL_FRAMES // len(combined)   # dynamic, matches simulation
 
-            param.append(row)
-            news_meta.append({
-                "headline": headline,
-                "source":   source,
-                "frame_start": NEWS_FRAME_SPACING * i,
-            })
+    param     = []
+    idealb    = []
+    news_meta = []
 
-    return param, idealb, news_meta
+    for i, (line_n, line_c) in enumerate(combined):
+        # Beta targets
+        parts_c = line_c.split("|")
+        idealb.append([float(parts_c[j]) for j in range(5, 11)])
+
+        # Raw weights
+        parts_n  = line_n.split("|")
+        headline = parts_n[2].strip() if len(parts_n) > 2 else f"Market Event {i+1}"
+        source   = parts_n[4].strip() if len(parts_n) > 4 else "Unknown"
+        src_w    = WSOURCE.get(source, 1.0)    # safe fetch, default 1.0
+
+        row = [float(parts_n[3])]              # index 0: base multiplier
+        row.append(src_w)                       # index 1: source credibility
+        for j in range(5, 11):                 # index 2-7: per-asset impacts
+            row.append(float(parts_n[j]))
+        row.append(i * deltat)                 # index 8: frame start
+        row.append((i * deltat) + deltat)      # index 9: frame end
+
+        param.append(row)
+        news_meta.append({
+            "headline":    headline,
+            "source":      source,
+            "frame_start": i * deltat,
+            "deltat":      deltat,
+        })
+
+    return param, idealb, news_meta, deltat
 
 
 # Load once at import time
-PARAM, IDEALB, NEWS_META = load_news_csvs()
+PARAM, IDEALB, NEWS_META, NEWS_DELTAT = load_news_csvs()
 
 # ─────────────────────────────────────────────
 # J_map Calibration (take_beta_give_wideal)
@@ -109,12 +111,13 @@ def int_mu(x: float) -> float:
 
 def take_beta_give_wideal(beta: float, news_index: int) -> float:
     """
-    Given a desired price ratio (beta) for a news event, compute the
-    ideal cumulative weight W that the J_map must deliver over the effect window.
+    Given desired price ratio (beta) for a news event, compute the ideal
+    cumulative weight W the J_map must deliver over the effect window.
+    Uses dynamic NEWS_DELTAT (total_frames // n_events).
     """
-    tstart   = NEWS_LAG_FRAMES + news_index * DELTA_T_NEWS
-    integral = int_mu((tstart + DELTA_T_NEWS) * DT) - int_mu(tstart * DT)
-    exp1     = 1 - math.exp(-K_DECAY * DELTA_T_NEWS * DT)
+    tstart   = NEWS_LAG_FRAMES + news_index * NEWS_DELTAT
+    integral = int_mu((tstart + NEWS_DELTAT) * DT) - int_mu(tstart * DT)
+    exp1     = 1 - math.exp(-K_DECAY * NEWS_DELTAT * DT)
     lnb      = math.log(beta)
     return (K_DECAY / exp1) * (lnb - integral)
 
@@ -128,37 +131,34 @@ class Asset:
         self.name         = name
         self.true_price   = true_price
         self.sigma        = sigma
-        self.newspos      = newspos      # column index into PARAM rows
+        self.newspos      = newspos
         self.decay_const  = decay_const
-        self.history      = [true_price]  # LTP-equivalent (true_price snapshots)
+        self.history      = [true_price]
         self.J_map        = np.zeros(TOTAL_FRAMES)
+        self.sigma_map    = np.zeros(TOTAL_FRAMES)   # per-frame volatility boost
 
     def make_J_map(self):
         """
-        Calibrated J_map construction.
-        Matches simulation's make_Jmap exactly:
-          1. Compute raw weights W[i] = base * source * asset_col
-          2. For each news event, compute ideal W from beta via take_beta_give_wideal
-          3. Compute calibration ratio |W_ideal| / |W_raw|
-          4. k_calib = median of all valid ratios
-          5. Apply calibrated, asymmetric weights into J_map
+        Calibrated J_map + sigma_map construction.
+        Matches latest simulation exactly:
+          1. Compute raw W[i] = base * source * asset_col
+          2. For each event compute ratio |w_ideal| / |W_raw|
+             NOTE: W[i] is NOT overwritten (unlike previous version)
+          3. k_calib = median of valid ratios
+          4. Apply calibrated asymmetric weights into J_map (neg×1.4, pos×0.6)
+          5. Compute sigma_map = gamma * sqrt(moving_avg(J_map^2, window))
         """
-        n_events = len(PARAM)
-        W        = []
-
-        for plist in PARAM:
-            weight = plist[0] * plist[1] * plist[self.newspos]
-            W.append(weight)
+        W = [plist[0] * plist[1] * plist[self.newspos] for plist in PARAM]
 
         ratios = []
         for i, b in enumerate(IDEALB):
-            beta_pct = b[self.newspos - 2]           # newspos 2→idx0 … 7→idx5
+            beta_pct = b[self.newspos - 2]
             beta     = 1 + (beta_pct / 100)
             if beta == 1 or W[i] == 0:
                 continue
             w_ideal = take_beta_give_wideal(beta, i)
             ratios.append(abs(w_ideal) / abs(W[i]))
-            W[i] = w_ideal
+            # W[i] is intentionally NOT replaced here
 
         k_calib = statistics.median(ratios) if ratios else 1.0
 
@@ -166,20 +166,26 @@ class Asset:
             start  = int(plist[8]) + NEWS_LAG_FRAMES
             end    = int(plist[9])
             weight = k_calib * plist[0] * (plist[1] * plist[self.newspos])
-            # Asymmetric amplification: bear news hits harder than bull news
             if weight < 0:
-                weight *= 1.55
+                weight *= 1.4   # bear news hits harder
             else:
-                weight *= 0.7
+                weight *= 0.6   # bull news dampened
 
             for f in range(start, min(end + 1, TOTAL_FRAMES)):
                 self.J_map[f] += weight * math.exp(-self.decay_const * (f - start) * DT)
 
+        # sigma_map: per-frame volatility boost driven by news magnitude
+        J2          = self.J_map ** 2
+        moving_avg  = np.convolve(J2, np.ones(SIGMA_MAP_WINDOW) / SIGMA_MAP_WINDOW, mode='same')
+        self.sigma_map = SIGMA_MAP_GAMMA * np.sqrt(moving_avg)
+
     def update_price(self, frame: int):
-        """Advance true_price one frame via GBM + news factor."""
+        """Advance true_price one frame via GBM + news factor + news-driven volatility."""
         news_factor   = self.J_map[frame] * self.true_price * DT
         general_trend = self.true_price * mu(frame) * DT
-        random_factor = self.true_price * self.sigma * math.sqrt(DT) * np.random.normal(0, 1)
+        # sigma_map adds extra volatility around news events
+        effective_sigma = self.sigma + self.sigma_map[frame]
+        random_factor   = self.true_price * effective_sigma * math.sqrt(DT) * np.random.normal(0, 1)
         self.true_price += general_trend + random_factor + news_factor
         self.true_price  = max(0.01, round(self.true_price, 4))
         self.history.append(self.true_price)
@@ -267,6 +273,10 @@ class GameState:
                         "frame":      frame,
                         "headline":   meta["headline"],
                         "source":     meta["source"],
+                        "assets_affected": [
+                            a.name for a in self.assets.values()
+                            if abs(PARAM[i][a.newspos]) > 0.01
+                        ],
                     }
                     self.current_news = event
                     self.released_news.append(event)
@@ -484,7 +494,20 @@ def take_action(body: ActionRequest, team_id: str = Depends(get_team)):
             if portfolio["cash"] < total:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Insufficient funds. Need ${total:.4f}, have ${portfolio['cash']:.2f}."
+                    detail=f"Insufficient funds. Need ₹{total:,.2f}, have ₹{portfolio['cash']:,.2f}."
+                )
+            # Position limit check: current holding value + new purchase cannot exceed MAX_POSITION_VALUE
+            current_holding_value = portfolio["holdings"].get(body.asset, 0) * price
+            if current_holding_value + total > MAX_POSITION_VALUE:
+                allowed = MAX_POSITION_VALUE - current_holding_value
+                max_qty = int(allowed // price)
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Position limit exceeded. Max ₹{MAX_POSITION_VALUE:,.0f} per stock. "
+                        f"You currently hold ₹{current_holding_value:,.2f} of {body.asset}. "
+                        f"You can buy at most {max_qty} more unit(s) (₹{max_qty * price:,.2f})."
+                    )
                 )
             portfolio["cash"]                  = round(portfolio["cash"] - total, 4)
             portfolio["holdings"][body.asset] += quantity
