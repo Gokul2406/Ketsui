@@ -6,16 +6,17 @@ import math
 # ─────────────────────────────────────────────
 # Admin & Auth
 # ─────────────────────────────────────────────
-ADMIN_KEY          = "tzqkabixdikyaijooxympodtpotlwoqk"
-STARTING_CASH      = 1_000_000.0   # INR 10,00,000
-MAX_POSITION_VALUE = 500_000.0     # Max INR 5,00,000 worth of any single stock
+ADMIN_KEY          = "admin-super-secret-key-change-this"
+STARTING_CASH      = 100_000.0   # INR 1,00,000
+MAX_POSITION_VALUE = 50_000.0    # Max INR 50,000 worth of any single stock
 
 TEAMS = {
-    "team_alpha":   {"name": "Team Alpha",   "api_key": "key-alpha-1234"},
-    "team_beta":    {"name": "Team Beta",    "api_key": "key-beta-5678"},
-    "team_gamma":   {"name": "Team Gamma",   "api_key": "key-gamma-9012"},
-    "team_delta":   {"name": "Team Delta",   "api_key": "key-delta-3456"},
-    "team_epsilon": {"name": "Team Epsilon", "api_key": "key-epsilon-7890"},
+    "team_alpha":   {"name": "milkshake",   "api_key": "milshakesuckswhatisthisusernamebro"},
+    "team_beta":    {"name": "corandvisory",    "api_key": "badusername12345"},
+    "team_gamma":   {"name": "cackle",   "api_key": "idkwhatcacklemeansbutsurebro"},
+    "team_delta":   {"name": "eulersballs",   "api_key": "veryinterestingchoiceofname69"},
+    "team_epsilon": {"name": "peepeepoopoo", "api_key": "poopoopeepee1234"},
+    "team_idk": {"name": "team_scrutari", "api_key": "scrutariwasaniceevent123"},
 }
 
 # ─────────────────────────────────────────────
@@ -67,10 +68,10 @@ def mu(frame: int) -> float:
 #   newspos 7 → col 10 → SBI
 # ─────────────────────────────────────────────
 ASSETS = [
-    {"name": "Dr. Reddy's", "true_price": 1300.0, "sigma": 0.002,  "newspos": 2, "decay_const": 0.01},
-    {"name": "Pfizer",      "true_price": 5055.0, "sigma": 0.001,  "newspos": 3, "decay_const": 0.01},
-    {"name": "Coromandel",  "true_price": 2219.0, "sigma": 0.001,  "newspos": 4, "decay_const": 0.01},
-    {"name": "Nestle",      "true_price": 9960.0, "sigma": 0.001,  "newspos": 5, "decay_const": 0.01},
-    {"name": "HDFC",        "true_price":  900.0, "sigma": 0.001,  "newspos": 6, "decay_const": 0.01},
-    {"name": "SBI",         "true_price": 1200.0, "sigma": 0.0011, "newspos": 7, "decay_const": 0.01},
+    {"name": "Dr. Reddy's", "true_price":  50.0, "sigma": 0.002,  "newspos": 2, "decay_const": 0.01},
+    {"name": "Pfizer",      "true_price": 200.0, "sigma": 0.001,  "newspos": 3, "decay_const": 0.01},
+    {"name": "Coromandel",  "true_price":  40.0, "sigma": 0.001,  "newspos": 4, "decay_const": 0.01},
+    {"name": "Nestle",      "true_price": 150.0, "sigma": 0.001,  "newspos": 5, "decay_const": 0.01},
+    {"name": "HDFC",        "true_price": 400.0, "sigma": 0.001,  "newspos": 6, "decay_const": 0.01},
+    {"name": "SBI",         "true_price": 250.0, "sigma": 0.0011, "newspos": 7, "decay_const": 0.01},
 ]
