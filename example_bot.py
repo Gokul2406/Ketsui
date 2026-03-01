@@ -4,11 +4,6 @@ example_bot.py — Starter bot template (v3)
 Works with the GBM simulation server (v3).
 
 Key changes from v2:
-- Assets are now: "Dr. Reddy's", "Pfizer", "Coromandel", "Nestle", "HDFC", "SBI"
-- No order book — trades execute at current true_price directly
-- No carry-overs — orders are always fully filled
-- Use GET /news/all on startup to catch up on any missed news
-- GET /market returns price, change, change_pct per asset
 
 Usage:
     python example_bot.py
@@ -18,8 +13,8 @@ import time
 import requests
 
 # ─── CONFIG ───────────────────────────────────
-BASE_URL      = "http://localhost:8000"
-API_KEY       = "key-alpha-1234"
+BASE_URL      = "https://ketsui-production.up.railway.app/"
+API_KEY       = "YOUR-API-KEY"
 POLL_INTERVAL = 5   # seconds between decision loops
 # ──────────────────────────────────────────────
 

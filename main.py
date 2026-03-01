@@ -268,15 +268,11 @@ class GameState:
                 if frame >= release_frame and key not in self.released_keys:
                     self.released_keys.add(key)
                     event = {
-                        "id":         key,
-                        "index":      i,
-                        "frame":      frame,
-                        "headline":   meta["headline"],
-                        "source":     meta["source"],
-                        "assets_affected": [
-                            a.name for a in self.assets.values()
-                            if abs(PARAM[i][a.newspos]) > 0.01
-                        ],
+                        "id":       key,
+                        "index":    i,
+                        "frame":    frame,
+                        "headline": meta["headline"],
+                        "source":   meta["source"],
                     }
                     self.current_news = event
                     self.released_news.append(event)
@@ -669,15 +665,11 @@ def release_news_manual(index: int, _=Depends(get_admin)):
         meta  = NEWS_META[index]
         key   = f"news_{index}"
         event = {
-            "id":              key,
-            "index":           index,
-            "frame":           state.current_frame,
-            "headline":        meta["headline"],
-            "source":          meta["source"],
-            "assets_affected": [
-                a.name for a in state.assets.values()
-                if abs(PARAM[index][a.newspos]) > 0.01
-            ],
+            "id":       key,
+            "index":    index,
+            "frame":    state.current_frame,
+            "headline": meta["headline"],
+            "source":   meta["source"],
         }
         state.current_news = event
         state.released_keys.add(key)

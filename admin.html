@@ -426,6 +426,41 @@ body {
 .pm-change.down { color: var(--red); }
 .pm-change.flat { color: var(--muted); }
 
+/* ── cash leaderboard chart ─────────────────── */
+.cash-chart-wrap {
+  position: relative;
+  background: var(--bg2);
+  padding: 0;
+}
+
+.cash-chart-wrap canvas {
+  display: block;
+  width: 100%;
+}
+
+.cash-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* ── status bar ─────────────────────────────── */
 .statusbar {
   display: flex;
@@ -604,6 +639,18 @@ body {
         </table>
       </div>
 
+      <!-- Capital Chart -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Team Capital — Live</span>
+          <span class="section-meta" id="cash-chart-meta">—</span>
+        </div>
+        <div class="cash-chart-wrap">
+          <canvas id="cash-chart" height="220"></canvas>
+        </div>
+        <div class="cash-legend" id="cash-legend"></div>
+      </div>
+
     </div>
   </div>
 
@@ -624,7 +671,10 @@ let ADMIN_KEY    = '';
 let pollTimer    = null;
 let prevPrices   = {};
 let lastNewsId   = null;
-let startingCash = 40000;
+let startingCash = 1000000;
+let cashHistory  = {};   // team_name → [cash_value, ...]
+const MAX_CASH_HISTORY = 150;
+const TEAM_COLORS = ['#ffb800','#00cc66','#4488ff','#ff3355','#cc44ff','#00cccc'];
 
 // ─── Auth ─────────────────────────────────────────────
 async function doLogin() {
@@ -673,12 +723,23 @@ async function fetchAll() {
     const status = await statusRes.json();
     const lb     = lbRes.ok ? await lbRes.json() : null;
 
+    // Track total portfolio value (cash + holdings) per team
+    if (status.portfolios) {
+      for (const [, p] of Object.entries(status.portfolios)) {
+        const name = p.name;
+        if (!cashHistory[name]) cashHistory[name] = [];
+        cashHistory[name].push(p.total_value);
+        if (cashHistory[name].length > MAX_CASH_HISTORY) cashHistory[name].shift();
+      }
+    }
+
     renderTopbar(status);
     renderTicker(status.assets);
     renderNews(status.current_news);
     renderPortfolios(status.portfolios, lb ? lb.leaderboard : null);
     renderLeaderboard(lb ? lb.leaderboard : null);
     renderPriceMovements(status.assets);
+    renderCashChart();
     renderStatusBar(status);
   } catch (e) {
     document.getElementById('sb-status').textContent = 'ERROR: ' + e.message;
@@ -687,7 +748,7 @@ async function fetchAll() {
 
 // ─── Render helpers ───────────────────────────────────
 function fmt(n) {
-  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtN(n) {
@@ -853,6 +914,100 @@ function renderPriceMovements(assets) {
     grid.appendChild(cell);
   }
 }
+
+function renderCashChart() {
+  const canvas = document.getElementById('cash-chart');
+  const wrap   = canvas.parentElement;
+  canvas.width = wrap.clientWidth;
+  const ctx    = canvas.getContext('2d');
+  const W      = canvas.width;
+  const H      = canvas.height;
+  const PAD    = { top: 24, right: 20, bottom: 32, left: 80 };
+
+  ctx.clearRect(0, 0, W, H);
+
+  const teams  = Object.keys(cashHistory);
+  if (teams.length === 0) {
+    ctx.fillStyle = '#333';
+    ctx.font = '11px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Waiting for data...', W / 2, H / 2);
+    return;
+  }
+
+  // Find global min/max across all teams for consistent Y axis
+  const allVals = teams.flatMap(t => cashHistory[t]);
+  const minV    = Math.min(...allVals);
+  const maxV    = Math.max(...allVals);
+  const rangeV  = maxV - minV || 1;
+  const maxLen  = Math.max(...teams.map(t => cashHistory[t].length));
+
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top  - PAD.bottom;
+
+  const toX = i   => PAD.left + (maxLen > 1 ? (i / (maxLen - 1)) * plotW : plotW / 2);
+  const toY = val => PAD.top  + (1 - (val - minV) / rangeV) * plotH;
+
+  // Grid lines + Y labels
+  ctx.strokeStyle = '#1e1e1e';
+  ctx.lineWidth   = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y   = PAD.top + (i / 4) * plotH;
+    const val = maxV - (i / 4) * rangeV;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(W - PAD.right, y);
+    ctx.stroke();
+    ctx.fillStyle  = '#555';
+    ctx.font       = '9px IBM Plex Mono, monospace';
+    ctx.textAlign  = 'right';
+    ctx.fillText('₹' + Math.round(val).toLocaleString('en-IN'), PAD.left - 6, y + 3);
+  }
+
+  // Draw a line per team
+  teams.forEach((team, idx) => {
+    const data  = cashHistory[team];
+    const color = TEAM_COLORS[idx % TEAM_COLORS.length];
+    if (data.length < 2) return;
+
+    // Offset each series on the x-axis to align right edge
+    const xOffset = maxLen - data.length;
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    data.forEach((v, i) => {
+      const x = toX(i + xOffset);
+      const y = toY(v);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Current value dot
+    const lastX = toX(xOffset + data.length - 1);
+    const lastY = toY(data[data.length - 1]);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  });
+
+  // Update meta and legend
+  document.getElementById('cash-chart-meta').textContent = `${maxLen} pts`;
+  const legend = document.getElementById('cash-legend');
+  legend.innerHTML = teams.map((team, idx) => {
+    const color = TEAM_COLORS[idx % TEAM_COLORS.length];
+    const cash  = cashHistory[team].at(-1) || 0;
+    return `<div class="legend-item">
+      <div class="legend-dot" style="background:${color}"></div>
+      <span style="color:${color}">${team}</span>
+      <span style="color:var(--text);margin-left:4px">₹${Math.round(cash).toLocaleString('en-IN')}</span>
+    </div>`;
+  }).join('');
+}
+
+window.addEventListener('resize', renderCashChart);
 
 function renderStatusBar(s) {
   document.getElementById('sb-status').textContent  = s.started ? '● LIVE' : '○ WAITING';
